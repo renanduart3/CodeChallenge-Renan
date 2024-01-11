@@ -3,25 +3,31 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.VisualBasic;
 using Model;
 using Models;
 
 Console.WriteLine("Hello, World!");
 
 #region [Input]
-string inputBills = @".\bills.csv";
-string inputLegislator = @".\legislators.csv";
-string inputVote = @".\votes.csv";
-string inputVoteResult = @".\vote_results.csv";
+string inputBills = @".\inputData\bills.csv";
+string inputLegislator = @".\inputData\legislators.csv";
+string inputVote = @".\inputData\votes.csv";
+string inputVoteResult = @".\inputData\vote_results.csv";
 
 #endregion
 
 #region [OutPut]
-string outPutOne = @".\out\legislators-support-oppose-count.csv";
-string outPutTwo = @".\out\bills.csv";
+string outPutFolder = @".\out\";
+string fileNameOne = "legislators-support-oppose-count.csv";
+string fileNameTwo = "bills.csv";
 
-List<string> legislatorsSupportResult = new();
-List<string> billsResult = new();
+DirectoryInfo di = Directory.CreateDirectory(outPutFolder);
+Console.WriteLine("The directory was created successfully at {0}.", Directory.GetCreationTime(outPutFolder));
+
+var fileOne = string.Concat(outPutFolder,fileNameOne);
+var fileTwo = string.Concat(outPutFolder,fileNameTwo);
+
 #endregion
 
 //config to headers ignore case
@@ -85,46 +91,57 @@ using (var csv = new CsvReader(reader, config))
 }
 
 var billsSupported = votesResultList.GroupBy(x => new { x.LegislatorId })
-.Select(b => new AnswerBillsLegislator
+    .Select(b => new AnswerBillsLegislator
 {
     Person = personsList.Where(c => c.Id == b.Key.LegislatorId).FirstOrDefault(),
     VotesOpposed = b.Count(c => c.VoteType == 2),
     VotesSupported = b.Count(c => c.VoteType == 1)
-});
+}).ToList();
 
-var summarryLegislators = votesResultList
-                    .Join(
-                        votesList,
-                        result => result.VoteId,
-                        vote => vote.Id,
-                        (result, vote) => new { result, vote }
-                    )
-                    .Join(
-                        billsList,
-                        x => x.vote.Bill_Id,
-                        bill => bill.Id,
-                        (x, bill) => new { BillId = bill.Id, Title = bill.Title, VoteType = x.result.VoteType, bill.PrimarySponsor }
-                    )
-                    .GroupBy(x => new { x.BillId, x.Title, x.PrimarySponsor })
-                    .Select(g => new
-                    {
-                        BillId = g.Key.BillId,
-                        Title = g.Key.Title,
-                        TotalSupporters = g.Count(x => x.VoteType == 1),
-                        TotalOpposers = g.Count(x => x.VoteType == 2),
-                        PrimarySponsor = g.Key.PrimarySponsor
-                    });
+var groupedVotes = votesResultList.GroupBy(y => y.VoteId)
+    .Select(group => new
+    {
+        VoteId = group.Key,
+        TotalSupport = group.Count(y => y.VoteType == 1),
+        TotalOppose = group.Count(y => y.VoteType == 2)
+    })
+    .ToList();
 
+var billPrimarySponsor = billsList.Select(b => new{
+    Bill_Id = b.Id,
+    PrimarySponsor = personsList.Where(c => c.Id == b.PrimarySponsor).FirstOrDefault()
+}).ToList();
 
+List<AnswerSummaryLegislator> summaryLegislatorList = new();
 
-using (var writer = new StreamWriter(outPutOne))
-using (var csv = new CsvWriter(writer, config))
-{
-    csv.WriteRecords(legislatorsSupportResult);
+foreach(var item in groupedVotes){
+
+    Vote? matchingVote = votesList.FirstOrDefault(x => x.Id == item.VoteId);
+    Bill? matchingBill = billsList.FirstOrDefault(x => x.Id == matchingVote.Bill_Id);
+    Person? matchingPerson = personsList.Where(c => c.Id == matchingBill.PrimarySponsor).FirstOrDefault();
+
+    string? primarySponsor = matchingPerson == null ? "Not found" : matchingPerson.Name;
+
+    summaryLegislatorList.Add(new AnswerSummaryLegislator{
+        Bill_Id = item.VoteId,
+        BillName = matchingBill.Title,
+        TotalOppose = item.TotalOppose,
+        TotalSupport = item.TotalSupport,
+        PrimarySponsor = primarySponsor
+    });
 }
 
-using (var writer = new StreamWriter(outPutTwo))
+
+using (var writer = new StreamWriter(fileOne))
 using (var csv = new CsvWriter(writer, config))
 {
-    csv.WriteRecords(billsResult);
+    csv.WriteRecords(billsSupported);
 }
+
+using (var writer = new StreamWriter(fileTwo))
+using (var csv = new CsvWriter(writer, config))
+{
+    csv.WriteRecords(summaryLegislatorList);
+}
+
+System.Console.WriteLine("Program ended.");

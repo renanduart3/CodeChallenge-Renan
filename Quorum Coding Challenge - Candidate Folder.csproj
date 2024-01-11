@@ -11,9 +11,9 @@
                           Version="30.0.1" />
     </ItemGroup>
     <ItemGroup>
-        <ContentWithTargetPath Include="*.csv">
+        <!-- Adicione a pasta 'inputData' e seus arquivos ao projeto -->
+        <None Update="inputData\**\*.*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <TargetPath>%(Filename)%(Extension)</TargetPath>
-        </ContentWithTargetPath>
+        </None>
     </ItemGroup>
 </Project>
