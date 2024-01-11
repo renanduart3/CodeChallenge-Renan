@@ -5,6 +5,7 @@
         <RootNamespace>Quorum_Coding_Challenge___Candidate_Folder</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AssemblyName>ProgramExecution</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="CsvHelper"
