@@ -33,7 +33,7 @@ var config = new CsvConfiguration(CultureInfo.InvariantCulture)
 
 List<Bill> billsList = new();
 List<Vote> votesList = new();
-List<Person>personsList = new();
+List<Person> personsList = new();
 List<VoteResult> votesResultList = new();
 
 using (var reader = new StreamReader(inputBills))
@@ -84,12 +84,38 @@ using (var csv = new CsvReader(reader, config))
     }
 }
 
-var billsSupported = votesResultList.GroupBy( x => new {x.LegislatorId })
-.Select(b => new AnswerBillsLegislator{
+var billsSupported = votesResultList.GroupBy(x => new { x.LegislatorId })
+.Select(b => new AnswerBillsLegislator
+{
     Person = personsList.Where(c => c.Id == b.Key.LegislatorId).FirstOrDefault(),
     VotesOpposed = b.Count(c => c.VoteType == 2),
     VotesSupported = b.Count(c => c.VoteType == 1)
 });
+
+var summarryLegislators = votesResultList
+                    .Join(
+                        votesList,
+                        result => result.VoteId,
+                        vote => vote.Id,
+                        (result, vote) => new { result, vote }
+                    )
+                    .Join(
+                        billsList,
+                        x => x.vote.Bill_Id,
+                        bill => bill.Id,
+                        (x, bill) => new { BillId = bill.Id, Title = bill.Title, VoteType = x.result.VoteType, bill.PrimarySponsor }
+                    )
+                    .GroupBy(x => new { x.BillId, x.Title, x.PrimarySponsor })
+                    .Select(g => new
+                    {
+                        BillId = g.Key.BillId,
+                        Title = g.Key.Title,
+                        TotalSupporters = g.Count(x => x.VoteType == 1),
+                        TotalOpposers = g.Count(x => x.VoteType == 2),
+                        PrimarySponsor = g.Key.PrimarySponsor
+                    });
+
+
 
 using (var writer = new StreamWriter(outPutOne))
 using (var csv = new CsvWriter(writer, config))
