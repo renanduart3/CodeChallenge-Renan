@@ -1,3 +1,3 @@
-Bill_Id,BillName,TotalSupport,TotalOppose
-3321166,H.R. 5376: Build Back Better Act,6,13
-3314452,H.R. 3684: Infrastructure Investment and Jobs Act,13,6
+Bill_Id,BillName,TotalSupport,TotalOppose,PrimarySponsor
+3321166,H.R. 5376: Build Back Better Act,6,13,Rep. John Yarmuth (D-KY-3)
+3314452,H.R. 3684: Infrastructure Investment and Jobs Act,13,6,Not found
